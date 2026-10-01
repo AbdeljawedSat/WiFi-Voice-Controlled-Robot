@@ -18,6 +18,16 @@ async function main() {
         database: process.env.DB_NAME || 'tinor_v3',
         multipleStatements: true,
       });
+  // Le schéma utilise des CREATE TABLE simples : on ne le rejoue pas sur une base
+  // déjà initialisée (sinon échec à chaque redémarrage avec `migrate && start`).
+  const [existing] = await conn.query(
+    "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'categories'"
+  );
+  if (existing[0].n > 0) {
+    console.log('✓ Schéma déjà en place, rien à faire.');
+    await conn.end();
+    return;
+  }
   console.log('Exécution du schéma BD Gestion Commerciale V3 sur',
     process.env.DATABASE_URL ? '(base configurée via DATABASE_URL)' : `${process.env.DB_HOST || '127.0.0.1'}/${process.env.DB_NAME || 'tinor_v3'}...`);
   await conn.query(sql);
